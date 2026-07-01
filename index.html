@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS-9 // Deep Systems</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cyan:#00f5ff; --red:#ff2d55; --gold:#ffd700; --green:#00ff88;
+  --purple:#bf5fff; --orange:#ff8c00;
+  --dark:#030810; --panel:rgba(0,245,255,0.04); --border:rgba(0,245,255,0.18);
+  --text:#c8e8f0; --dim:rgba(200,232,240,0.45);
+  --glow:0 0 20px rgba(0,245,255,0.5); --glow2:0 0 60px rgba(0,245,255,0.3);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-snap-type:y mandatory}
+body{background:var(--dark);color:var(--text);font-family:'Rajdhani',sans-serif;overflow-x:hidden;cursor:none}
+
+/* CURSOR */
+#cur{position:fixed;top:0;left:0;pointer-events:none;z-index:9999;mix-blend-mode:screen}
+#cd{width:8px;height:8px;background:var(--cyan);border-radius:50%;position:absolute;transform:translate(-50%,-50%);box-shadow:0 0 12px var(--cyan),0 0 24px var(--cyan)}
+#cr{width:32px;height:32px;border:1px solid rgba(0,245,255,0.6);border-radius:50%;position:absolute;transform:translate(-50%,-50%);transition:width .2s,height .2s,border-color .3s}
+
+/* SCANLINES */
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.025) 2px,rgba(0,0,0,0.025) 4px);pointer-events:none;z-index:9998}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;padding:18px 50px;background:rgba(3,8,16,0.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.logo{font-family:'Orbitron',monospace;font-size:20px;font-weight:900;letter-spacing:4px;color:var(--cyan);text-shadow:var(--glow);text-decoration:none}
+.logo em{color:var(--red);font-style:normal}
+.nav-sys{display:flex;gap:6px}
+.sys-dot{width:28px;height:28px;border:1px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:none;transition:all .3s;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--dim)}
+.sys-dot:hover,.sys-dot.active{border-color:var(--cyan);color:var(--cyan);box-shadow:var(--glow);background:rgba(0,245,255,0.06)}
+.nav-status{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--dim);display:flex;align-items:center;gap:8px}
+.status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:blink 1.4s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* SECTIONS — full-screen snap */
+.section{height:100vh;scroll-snap-align:start;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center}
+
+/* HERO */
+#hero{background:var(--dark)}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,245,255,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,245,255,0.05) 1px,transparent 1px);background-size:80px 80px;mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 0%,transparent 100%)}
+.hero-center{position:relative;z-index:2;text-align:center;padding:0 40px}
+.hero-pre{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:5px;color:var(--cyan);margin-bottom:28px;opacity:.7}
+.hero-h1{font-family:'Orbitron',monospace;font-size:clamp(52px,9vw,120px);font-weight:900;line-height:.9;color:#fff}
+.hero-h1 .stroke{-webkit-text-stroke:2px var(--cyan);color:transparent;filter:drop-shadow(0 0 30px rgba(0,245,255,0.4))}
+.hero-h1 .red{color:var(--red);text-shadow:0 0 40px rgba(255,45,85,0.6)}
+.hero-sub{font-size:16px;color:var(--dim);margin:32px auto 48px;max-width:560px;line-height:1.7;font-weight:300}
+.scroll-hint{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--dim);display:flex;flex-direction:column;align-items:center;gap:12px;animation:floatY 2s ease-in-out infinite}
+.scroll-arrow{width:1px;height:48px;background:linear-gradient(to bottom,var(--cyan),transparent)}
+@keyframes floatY{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(8px)}}
+
+/* System nav pills */
+.sys-nav{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:48px}
+.sys-pill{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;padding:7px 16px;border:1px solid var(--border);color:var(--dim);text-decoration:none;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);transition:all .3s;cursor:none}
+.sys-pill:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(0,245,255,0.06);box-shadow:var(--glow)}
+
+/* ─────────────────────────────────────────
+   SECTION COMMON LAYOUT
+───────────────────────────────────────── */
+.sys-layout{display:grid;grid-template-columns:1fr 1fr;height:100%;align-items:center;padding:80px 60px 60px;gap:60px;position:relative;z-index:2}
+.sys-info{display:flex;flex-direction:column;gap:0}
+.sys-tag{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:4px;color:var(--dim);margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.sys-tag::before{content:'';width:32px;height:1px;background:currentColor}
+.sys-id{font-family:'Share Tech Mono',monospace;font-size:60px;font-weight:900;line-height:1;opacity:.07;position:absolute;top:100px;left:50px;letter-spacing:-4px}
+.sys-title{font-family:'Orbitron',monospace;font-size:clamp(28px,4vw,52px);font-weight:900;line-height:1.05;margin-bottom:24px}
+.sys-desc{font-size:16px;color:rgba(255,255,255,0.85);line-height:1.8;font-weight:300;margin-bottom:32px;max-width:480px}
+.sys-specs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:32px}
+.spec-chip{background:rgba(255,255,255,0.03);border:1px solid var(--border);padding:14px 18px;position:relative;overflow:hidden}
+.spec-chip::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent,var(--cyan)),transparent)}
+.spec-chip-key{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--dim);margin-bottom:6px;text-transform:uppercase}
+.spec-chip-val{font-family:'Orbitron',monospace;font-size:15px;font-weight:700;color:var(--accent,var(--cyan))}
+.sys-bar-wrap{margin-top:8px}
+.sys-bar-label{display:flex;justify-content:space-between;font-family:'Share Tech Mono',monospace;font-size:10px;margin-bottom:6px;color:var(--dim)}
+.sys-bar{height:3px;background:rgba(255,255,255,0.06);margin-bottom:12px}
+.sys-bar-fill{height:100%;background:var(--accent,var(--cyan));box-shadow:0 0 8px var(--accent,var(--cyan));transform:scaleX(0);transform-origin:left;transition:transform 1.2s cubic-bezier(.16,1,.3,1)}
+.visible .sys-bar-fill{transform:scaleX(1)}
+
+/* Visual panel right side */
+.sys-visual{display:flex;align-items:center;justify-content:center;height:100%;position:relative}
+
+/* BG accent per section */
+#neural{background:linear-gradient(135deg,#030810 60%,rgba(0,245,255,0.04) 100%)}
+.neural-accent{position:absolute;right:-200px;top:50%;transform:translateY(-50%);width:700px;height:700px;background:radial-gradient(circle,rgba(0,245,255,0.06) 0%,transparent 65%);pointer-events:none}
+
+#optic{background:linear-gradient(225deg,#030810 60%,rgba(255,45,85,0.05) 100%)}
+.optic-accent{position:absolute;left:-200px;top:50%;transform:translateY(-50%);width:700px;height:700px;background:radial-gradient(circle,rgba(255,45,85,0.07) 0%,transparent 65%);pointer-events:none}
+
+#exo{background:linear-gradient(135deg,#030810 60%,rgba(255,215,0,0.04) 100%)}
+.exo-accent{position:absolute;right:-200px;top:50%;transform:translateY(-50%);width:700px;height:700px;background:radial-gradient(circle,rgba(255,215,0,0.05) 0%,transparent 65%);pointer-events:none}
+
+#biosync{background:linear-gradient(225deg,#030810 60%,rgba(0,255,136,0.05) 100%)}
+.bio-accent{position:absolute;left:-200px;top:50%;transform:translateY(-50%);width:700px;height:700px;background:radial-gradient(circle,rgba(0,255,136,0.06) 0%,transparent 65%);pointer-events:none}
+
+#combat{background:linear-gradient(135deg,#030810 60%,rgba(255,140,0,0.05) 100%)}
+.combat-accent{position:absolute;right:-200px;top:50%;transform:translateY(-50%);width:700px;height:700px;background:radial-gradient(circle,rgba(255,140,0,0.07) 0%,transparent 65%);pointer-events:none}
+
+#quantum{background:linear-gradient(225deg,#030810 60%,rgba(191,95,255,0.06) 100%)}
+.quantum-accent{position:absolute;left:-200px;top:50%;transform:translateY(-50%);width:700px;height:700px;background:radial-gradient(circle,rgba(191,95,255,0.08) 0%,transparent 65%);pointer-events:none}
+
+/* Shared animation */
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes spinR{from{transform:rotate(360deg)}to{transform:rotate(0deg)}}
+@keyframes pulse{0%,100%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.05)}}
+@keyframes pulseRing{0%{transform:scale(1);opacity:.7}100%{transform:scale(2.2);opacity:0}}
+@keyframes scanLine{0%{top:-4px}100%{top:100%}}
+@keyframes dataFill{from{stroke-dashoffset:600}to{stroke-dashoffset:0}}
+@keyframes blink2{0%,100%{opacity:1}49%{opacity:1}50%{opacity:0}99%{opacity:0}}
+@keyframes drift{0%,100%{transform:translateY(0) translateX(0)}33%{transform:translateY(-12px) translateX(6px)}66%{transform:translateY(8px) translateX(-8px)}}
+@keyframes revealUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
+
+/* Section reveal */
+.sys-info > *{opacity:0;transform:translateY(30px);transition:opacity .7s ease,transform .7s ease}
+.section.active .sys-info > *:nth-child(1){opacity:1;transform:none;transition-delay:.1s}
+.section.active .sys-info > *:nth-child(2){opacity:1;transform:none;transition-delay:.22s}
+.section.active .sys-info > *:nth-child(3){opacity:1;transform:none;transition-delay:.34s}
+.section.active .sys-info > *:nth-child(4){opacity:1;transform:none;transition-delay:.46s}
+.section.active .sys-info > *:nth-child(5){opacity:1;transform:none;transition-delay:.58s}
+.section.active .sys-info > *:nth-child(6){opacity:1;transform:none;transition-delay:.70s}
+.section.active .sys-info > *:nth-child(7){opacity:1;transform:none;transition-delay:.82s}
+.sys-visual{opacity:0;transition:opacity 1s ease .3s}
+.section.active .sys-visual{opacity:1}
+
+/* PROGRESS INDICATOR */
+#progress{position:fixed;right:28px;top:50%;transform:translateY(-50%);z-index:800;display:flex;flex-direction:column;gap:10px}
+.prog-dot{width:6px;height:6px;border-radius:50%;border:1px solid var(--border);cursor:none;transition:all .3s}
+.prog-dot.on{background:var(--cyan);border-color:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+
+/* ═══════════════════
+   NEURAL SVG VISUALS
+═══════════════════ */
+.neural-canvas{position:relative;width:460px;height:460px}
+.neural-ring{position:absolute;border-radius:50%;border:1px solid;animation:spin 20s linear infinite}
+.neural-ring.r1{inset:0;border-color:rgba(0,245,255,0.12);animation-duration:30s}
+.neural-ring.r2{inset:30px;border-color:rgba(0,245,255,0.1);animation-duration:22s;animation-direction:reverse;border-style:dashed}
+.neural-ring.r3{inset:60px;border-color:rgba(0,245,255,0.18);animation-duration:18s}
+
+/* OPTIC VISUAL */
+.optic-canvas{position:relative;width:440px;height:440px;display:flex;align-items:center;justify-content:center}
+
+/* EXO VISUAL */
+.exo-canvas{position:relative;width:440px;height:480px;display:flex;align-items:center;justify-content:center}
+
+/* BIOSYNC VISUAL */
+.bio-canvas{position:relative;width:440px;height:440px;display:flex;align-items:center;justify-content:center}
+
+/* COMBAT VISUAL */
+.combat-canvas{position:relative;width:460px;height:460px;display:flex;align-items:center;justify-content:center}
+
+/* QUANTUM VISUAL */
+.quantum-canvas{position:relative;width:440px;height:440px;display:flex;align-items:center;justify-content:center}
+
+/* Floating data tags */
+.data-tag{position:absolute;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--accent,var(--cyan));border:1px solid;border-color:var(--accent,rgba(0,245,255,0.3));padding:4px 9px;background:rgba(3,8,16,0.8);white-space:nowrap;animation:drift 5s ease-in-out infinite}
+
+/* RESPONSIVE */
+@media(max-width:800px){
+  nav{padding:16px 20px}
+  .nav-sys{display:none}
+  .sys-layout{grid-template-columns:1fr;padding:80px 24px 40px;gap:30px}
+  .sys-visual{height:240px}
+  .neural-canvas,.optic-canvas,.exo-canvas,.bio-canvas,.combat-canvas,.quantum-canvas{width:240px;height:240px}
+  .sys-id{font-size:40px;top:70px;left:20px}
+  #progress{right:12px}
+  .hero-h1{font-size:clamp(40px,10vw,80px)}
+}
+
+/* CTA FOOTER */
+#cta-section{background:radial-gradient(ellipse 70% 70% at 50% 50%,rgba(0,245,255,0.05) 0%,transparent 70%);border-top:1px solid var(--border);text-align:center;padding:0 40px}
+.cta-label{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:4px;color:var(--red);margin-bottom:20px}
+.cta-h{font-family:'Orbitron',monospace;font-size:clamp(32px,6vw,72px);font-weight:900;color:#fff;line-height:1;margin-bottom:20px}
+.cta-h span{color:var(--cyan)}
+.cta-p{font-size:16px;color:var(--dim);margin-bottom:48px;font-weight:300;max-width:480px;margin-left:auto;margin-right:auto;line-height:1.7}
+.cta-btns{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+.btn-p{font-family:'Orbitron',monospace;font-size:12px;letter-spacing:3px;font-weight:700;color:#030810;background:var(--cyan);border:none;padding:16px 36px;cursor:none;clip-path:polygon(10px 0%,100% 0%,calc(100% - 10px) 100%,0% 100%);transition:box-shadow .3s,transform .2s;text-decoration:none;display:inline-block}
+.btn-p:hover{box-shadow:0 0 40px rgba(0,245,255,0.7),0 0 80px rgba(0,245,255,0.3);transform:translateY(-2px)}
+.btn-s{font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:2px;color:var(--cyan);background:transparent;border:1px solid var(--border);padding:15px 32px;cursor:none;text-decoration:none;display:inline-block;transition:border-color .3s,background .3s,box-shadow .3s}
+.btn-s:hover{border-color:var(--cyan);background:rgba(0,245,255,0.06);box-shadow:0 0 20px rgba(0,245,255,0.4)}
+</style>
+</head>
+<body>
+
+<!-- CURSOR -->
+<div id="cur"><div id="cd"></div><div id="cr"></div></div>
+
+<!-- PROGRESS DOTS -->
+<div id="progress">
+  <div class="prog-dot on" data-i="0" onclick="goTo(0)"></div>
+  <div class="prog-dot" data-i="1" onclick="goTo(1)"></div>
+  <div class="prog-dot" data-i="2" onclick="goTo(2)"></div>
+  <div class="prog-dot" data-i="3" onclick="goTo(3)"></div>
+  <div class="prog-dot" data-i="4" onclick="goTo(4)"></div>
+  <div class="prog-dot" data-i="5" onclick="goTo(5)"></div>
+  <div class="prog-dot" data-i="6" onclick="goTo(6)"></div>
+  <div class="prog-dot" data-i="7" onclick="goTo(7)"></div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <a class="logo" href="#">NEX<em>US</em>-9</a>
+  <div class="nav-sys">
+    <div class="sys-dot active" onclick="goTo(1)" title="Neural">N1</div>
+    <div class="sys-dot" onclick="goTo(2)" title="Optic">O2</div>
+    <div class="sys-dot" onclick="goTo(3)" title="Exo">E3</div>
+    <div class="sys-dot" onclick="goTo(4)" title="BioSync">B4</div>
+    <div class="sys-dot" onclick="goTo(5)" title="Combat">C5</div>
+    <div class="sys-dot" onclick="goTo(6)" title="Quantum">Q6</div>
+  </div>
+  <div class="nav-status"><div class="status-dot"></div>ALL SYSTEMS NOMINAL</div>
+</nav>
+
+<!-- ══════════════════════════════════════
+     SECTION 0 — HERO
+══════════════════════════════════════ -->
+<section class="section active" id="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-center">
+    <div class="hero-pre">// NEXUS-9 DEEP SYSTEMS OVERVIEW //</div>
+    <h1 class="hero-h1">
+      <span class="stroke">BEYOND</span><br>
+      <span style="color:#fff">HUMAN</span><br>
+      <span class="red">LIMITS</span>
+    </h1>
+    <p class="hero-sub">Six core augmentation platforms. Each one a universe of engineered excellence. Scroll to descend into each system.</p>
+    <div class="sys-nav">
+      <a class="sys-pill" href="#neural" onclick="goTo(1)">01 NEURAL INTERFACE</a>
+      <a class="sys-pill" href="#optic" onclick="goTo(2)">02 OPTIC TARGETING</a>
+      <a class="sys-pill" href="#exo" onclick="goTo(3)">03 EXOSKELETON FRAME</a>
+      <a class="sys-pill" href="#biosync" onclick="goTo(4)">04 BIOSYNC CORE</a>
+      <a class="sys-pill" href="#combat" onclick="goTo(5)">05 COMBAT HUD</a>
+      <a class="sys-pill" href="#quantum" onclick="goTo(6)">06 QUANTUM ENCRYPTION</a>
+    </div>
+  </div>
+  <div class="scroll-hint">
+    <span>SCROLL TO EXPLORE</span>
+    <div class="scroll-arrow"></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     SECTION 1 — NEURAL INTERFACE
+══════════════════════════════════════ -->
+<section class="section" id="neural" style="--accent:var(--cyan)">
+  <div class="neural-accent"></div>
+  <div class="sys-id" style="color:var(--cyan)">01</div>
+  <div class="sys-layout">
+    <div class="sys-info">
+      <div class="sys-tag" style="color:var(--cyan)">SYS_01 // COGNITIVE LAYER</div>
+      <h2 class="sys-title" style="color:#fff">NEURAL<br><span style="color:var(--cyan)">INTERFACE</span></h2>
+      <p class="sys-desc">A 4,096-channel electrode mesh woven directly into your cortex at nanoscale precision. Thought becomes command. Every digital network becomes an extension of your mind — at the speed of electricity itself.<br><br>The NX-9 Neural Bridge processes 2.4 terabytes of bidirectional signal per second, translating intention into action with zero latency perception. You don't use technology — you <em>become</em> it.</p>
+      <div class="sys-specs">
+        <div class="spec-chip"><div class="spec-chip-key">Electrode Channels</div><div class="spec-chip-val">4,096</div></div>
+        <div class="spec-chip"><div class="spec-chip-key">Bandwidth</div><div class="spec-chip-val">2.4 TB/s</div></div>
+        <div class="spec-chip"><div class="spec-chip-key">Signal Latency</div><div class="spec-chip-val">0.3 ms</div></div>
+        <div class="spec-chip"><div class="spec-chip-key">Sync Accuracy</div><div class="spec-chip-val">99.8%</div></div>
+      </div>
+      <div class="sys-bar-wrap">
+        <div class="sys-bar-label"><span>NEURAL COHERENCE</span><span style="color:var(--cyan)">99.8%</span></div>
+        <div class="sys-bar"><div class="sys-bar-fill" style="width:99.8%"></div></div>
+        <div class="sys-bar-label"><span>COGNITIVE LOAD</span><span style="color:var(--cyan)">42%</span></div>
+        <div class="sys-bar"><div class="sys-bar-fill" style="width:42%"></div></div>
+        <div class="sys-bar-label"><span>MESH INTEGRITY</span><span style="color:var(--cyan)">100%</span></div>
+        <div class="sys-bar"><div class="sys-bar-fill" style="width:100%"></div></div>
+      </div>
+    </div>
+    <div class="sys-visual">
+      <!-- Neural brain SVG -->
+      <div class="neural-canvas">
+        <div class="neural-ring r1"></div>
+        <div class="neural-ring r2"></div>
+        <div class="neural-ring r3"></div>
+        <svg viewBox="0 0 460 460" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%">
+          <defs>
+            <filter id="nglow"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <radialGradient id="brainGrad" cx="50%" cy="50%"><stop offset="0%" stop-color="rgba(0,245,255,0.15)"/><stop offset="100%" stop-color="rgba(0,245,255,0)"/></radialGradient>
+          </defs>
+          <!-- Brain outline -->
+          <path d="M230 100 C190 100 155 120 145 155 C130 155 112 165 110 185 C95 185 80 198 82 218 C68 228 64 248 74 264 C62 278 64 300 78 312 C78 335 92 355 112 360 C120 378 140 388 160 386 C170 400 185 408 200 406 C210 416 222 420 232 418 C242 420 254 416 264 406 C280 408 294 400 304 386 C324 388 344 378 352 360 C372 355 386 335 386 312 C400 300 402 278 390 264 C400 248 396 228 382 218 C384 198 368 185 354 185 C352 165 335 155 320 155 C310 120 274 100 230 100Z"
+            fill="url(#brainGrad)" stroke="rgba(0,245,255,0.3)" stroke-width="1.5" filter="url(#nglow)"/>
+          <!-- Brain folds -->
+          <path d="M175 160 Q190 175 185 195 Q178 215 190 228" fill="none" stroke="rgba(0,245,255,0.25)" stroke-width="1"/>
+          <path d="M210 140 Q215 165 205 185 Q198 205 212 220" fill="none" stroke="rgba(0,245,255,0.2)" stroke-width="1"/>
+          <path d="M250 138 Q258 162 248 182 Q240 202 255 215" fill="none" stroke="rgba(0,245,255,0.2)" stroke-width="1"/>
+          <path d="M285 155 Q295 175 290 198 Q282 218 295 230" fill="none" stroke="rgba(0,245,255,0.22)" stroke-width="1"/>
+          <path d="M150 230 Q165 245 158 265 Q150 285 163 300" fill="none" stroke="rgba(0,245,255,0.2)" stroke-width="1"/>
+          <path d="M190 240 Q202 255 196 278 Q188 298 200 312" fill="none" stroke="rgba(0,245,255,0.18)" stroke-width="1"/>
+          <path d="M230 245 Q242 260 236 282 Q228 302 242 315" fill="none" stroke="rgba(0,245,255,0.18)" stroke-width="1"/>
+          <path d="M268 242 Q280 256 274 278 Q266 298 280 310" fill="none" stroke="rgba(0,245,255,0.2)" stroke-width="1"/>
+          <path d="M305 232 Q318 248 312 268 Q305 288 318 300" fill="none" stroke="rgba(0,245,255,0.2)" stroke-width="1"/>
+          <!-- Central divide -->
+          <line x1="230" y1="108" x2="230" y2="395" stroke="rgba(0,245,255,0.12)" stroke-width="1" stroke-dasharray="4 6"/>
+          <!-- Electrode dots -->
+          <circle cx="175" cy="178" r="3" fill="var(--cyan)" filter="url(#nglow)" style="animation:blink 1.8s step-end infinite"/>
+          <circle cx="210" cy="158" r="3" fill="var(--cyan)" filter="url(#nglow)" style="animation:blink 2.2s step-end infinite .3s"/>
+          <circle cx="252" cy="152" r="3" fill="var(--cyan)" filter="url(#nglow)" style="animation:blink 1.5s step-end infinite .6s"/>
+          <circle cx="290" cy="168" r="3" fill="var(--cyan)" filter="url(#nglow)" style="animation:blink 2s step-end infinite .1s"/>
+          <circle cx="315" cy="195" r="3" fill="var(--cyan)" filter="url(#nglow)" style="animation:blink 1.7s step-end infinite .4s"/>
+          <circle cx="155" cy="252" r="3" fill="var(--cyan)" filter="url(#nglow)" style="animation:blink 2.3s step-end infinite .2s"/>
+          <circle cx="195" cy="268" r="3" fill="var(--cyan)" filter="url(#nglow)" style="animation:blink 1.6s step-end infinite .7s"/>
+          <circle cx="235" cy="260" r="3" fill="var(--cyan)" filter="url(#nglow)" style="animation:blink 2.1s step-end infinite .5s"/>
+          <circle cx="275" cy="265" r="3" fill="var(--cyan)" filter="url(#nglow)" style="animation:blink 1.9s step-end infinite .3s"/>
+          <circle cx="315" cy="258" r="3" fill="var(--cyan)" filter="url(#nglow)" style="animation:blink 2.4s step-end infinite .8s"/>
+          <circle cx="350" cy="230" r="3" fill="var(--cyan)" filter="url(#nglow)" style="animation:blink 1.4s step-end infinite .1s"/>
+          <!-- Signal lines from electrodes -->
+          <line x1="175" y1="178" x2="195" y2="268" stroke="rgba(0,245,255,0.15)" stroke-width="1"/>
+          <line x1="210" y1="158" x2="235" y2="260" stroke="rgba(0,245,255,0.15)" stroke-width="1"/>
+          <line x1="252" y1="152" x2="275" y2="265" stroke="rgba(0,245,255,0.15)" stroke-width="1"/>
+          <line x1="290" y1="168" x2="315" y2="258" stroke="rgba(0,245,255,0.12)" stroke-width="1"/>
+          <line x1="155" y1="252" x2="195" y2="268" stroke="rgba(0,245,255,0.1)" stroke-width="1"/>
+          <!-- Scan line -->
+          <rect x="110" y="0" width="240" height="3" fill="rgba(0,245,255,0.18)" style="animation:scanLine 3s linear infinite"/>
+          <!-- Central hub -->
+          <circle cx="230" cy="230" r="18" fill="rgba(0,245,255,0.1)" stroke="var(--cyan)" stroke-width="1.5" filter="url(#nglow)"/>
+          <circle cx="230" cy="230" r="8" fill="var(--cyan)" opacity=".7"/>
+          <circle cx="230" cy="230" r="18" fill="none" stroke="var(--cyan)" stroke-width="1" style="animation:pulseRing 2s ease-out infinite;transform-origin:230px 230px"/>
+        </svg>
+        <!-- Floating tags -->
+        <div class="data-tag" style="top:12%;right:2%;animation-delay:0s">SIG:4096ch</div>
+        <div class="data-tag" style="bottom:16%;left:2%;animation-delay:1.5s">LAT:0.3ms</div>
+        <div class="data-tag" style="top:55%;right:0%;animation-delay:3s">SYNC:99.8%</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     SECTION 2 — OPTIC TARGETING
+══════════════════════════════════════ -->
+<section class="section" id="optic" style="--accent:var(--red)">
+  <div class="optic-accent"></div>
+  <div class="sys-id" style="color:var(--red)">02</div>
+  <div class="sys-layout" style="direction:rtl">
+    <div class="sys-info" style="direction:ltr">
+      <div class="sys-tag" style="color:var(--red)">SYS_02 // VISUAL WARFARE LAYER</div>
+      <h2 class="sys-title" style="color:#fff">OPTIC<br><span style="color:var(--red)">TARGETING</span></h2>
+      <p class="sys-desc">Military-grade synthetic retina replaces your biological eye with a 360° sensor array. Thermal signatures, electromagnetic fields, sonar echolocation, and UV spectrum — all rendered simultaneously in your vision at 240Hz.<br><br>The AI-assisted threat engine identifies, classifies, and tracks 128 simultaneous targets. Ballistic trajectory prediction updates 1,000 times per second. You see everything. You miss nothing.</p>
+      <div class="sys-specs" style="--accent:var(--red)">
+        <div class="spec-chip"><div class="spec-chip-key">Field of View</div><div class="spec-chip-val" style="color:var(--red)">360°</div></div>
+        <div class="spec-chip"><div class="spec-chip-key">Refresh Rate</div><div class="spec-chip-val" style="color:var(--red)">240 Hz</div></div>
+        <div class="spec-chip"><div class="spec-chip-key">Target Lock</div><div class="spec-chip-val" style="color:var(--red)">128 sim.</div></div>
+        <div class="spec-chip"><div class="spec-chip-key">Spectrum</div><div class="spec-chip-val" style="color:var(--red)">Full EM</div></div>
+      </div>
+      <div class="sys-bar-wrap">
+        <div class="sys-bar-label"><span>TARGET ACQUISITION</span><span style="color:var(--red)">97.4%</span></div>
+        <div class="sys-bar"><div class="sys-bar-fill" style="width:97.4%;background:var(--red);box-shadow:0 0 8px var(--red)"></div></div>
+        <div class="sys-bar-label"><span>THREAT IDENTIFICATION</span><span style="color:var(--red)">94.1%</span></div>
+        <div class="sys-bar"><div class="sys-bar-fill" style="width:94.1%;background:var(--red);box-shadow:0 0 8px var(--red)"></div></div>
+        <div class="sys-bar-label"><span>TRACKING PRECISION</span><span style="color:var(--red)">99.1%</span></div>
+        <div class="sys-bar"><div class="sys-bar-fill" style="width:99.1%;background:var(--red);box-shadow:0 0 8px var(--red)"></div></div>
+      </div>
+    </div>
+    <div class="sys-visual" style="direction:ltr">
+      <div class="optic-canvas">
+        <svg viewBox="0 0 440 440" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+          <defs>
+            <filter id="oglow"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <radialGradient id="eyeGrad" cx="50%" cy="50%"><stop offset="0%" stop-color="rgba(255,45,85,0.3)"/><stop offset="60%" stop-color="rgba(255,45,85,0.05)"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+            <clipPath id="eyeClip"><ellipse cx="220" cy="220" rx="130" ry="80"/></clipPath>
+          </defs>
+          <!-- Eye shape -->
+          <ellipse cx="220" cy="220" rx="165" ry="100" fill="none" stroke="rgba(255,45,85,0.25)" stroke-width="1.5"/>
+          <ellipse cx="220" cy="220" rx="130" ry="80" fill="url(#eyeGrad)" stroke="rgba(255,45,85,0.4)" stroke-width="1.5" filter="url(#oglow)"/>
+          <!-- Iris -->
+          <circle cx="220" cy="220" r="62" fill="rgba(0,0,0,0.8)" stroke="var(--red)" stroke-width="2" filter="url(#oglow)"/>
+          <!-- Iris detail rings -->
+          <circle cx="220" cy="220" r="52" fill="none" stroke="rgba(255,45,85,0.3)" stroke-width="1" stroke-dasharray="4 3" style="animation:spin 8s linear infinite;transform-origin:220px 220px"/>
+          <circle cx="220" cy="220" r="44" fill="none" stroke="rgba(255,45,85,0.2)" stroke-width="1" style="animation:spinR 12s linear infinite;transform-origin:220px 220px"/>
+          <!-- Pupil -->
+          <circle cx="220" cy="220" r="28" fill="rgba(255,45,85,0.15)" stroke="var(--red)" stroke-width="2" filter="url(#oglow)"/>
+          <circle cx="220" cy="220" r="12" fill="var(--red)" opacity=".8"/>
+          <circle cx="220" cy="220" r="5" fill="#fff"/>
+          <!-- Targeting reticle crosshairs -->
+          <line x1="220" y1="155" x2="220" y2="185" stroke="var(--red)" stroke-width="1.5" filter="url(#oglow)"/>
+          <line x1="220" y1="255" x2="220" y2="285" stroke="var(--red)" stroke-width="1.5" filter="url(#oglow)"/>
+          <line x1="155" y1="220" x2="185" y2="220" stroke="var(--red)" stroke-width="1.5" filter="url(#oglow)"/>
+          <line x1="255" y1="220" x2="285" y2="220" stroke="var(--red)" stroke-width="1.5" filter="url(#oglow)"/>
+          <!-- Corner brackets -->
+          <path d="M180 180 L168 180 L168 192" fill="none" stroke="var(--red)" stroke-width="1.5"/>
+          <path d="M260 180 L272 180 L272 192" fill="none" stroke="var(--red)" stroke-width="1.5"/>
+          <path d="M180 260 L168 260 L168 248" fill="none" stroke="var(--red)" stroke-width="1.5"/>
+          <path d="M260 260 L272 260 L272 248" fill="none" stroke="var(--red)" stroke-width="1.5"/>
+          <!-- Outer targeting rings -->
+          <circle cx="220" cy="220" r="100" fill="none" stroke="rgba(255,45,85,0.12)" stroke-width="1" stroke-dasharray="6 4"/>
+          <circle cx="220" cy="220" r="130" fill="none" stroke="rgba(255,45,85,0.08)" stroke-width="1"/>
+          <!-- Pulse -->
+          <circle cx="220" cy="220" r="62" fill="none" stroke="var(--red)" stroke-width="1" opacity=".4" style="animation:pulseRing 2.5s ease-out infinite;transform-origin:220px 220px"/>
+          <circle cx="220" cy="220" r="62" fill="none" stroke="var(--red)" stroke-width="1" opacity=".3" style="animation:pulseRing 2.5s ease-out 1.2s infinite;transform-origin:220px 220px"/>
+          <!-- HUD tick marks -->
+          <text x="224" y="152" fill="rgba(255,45,85,0.6)" font-family="Share Tech Mono" font-size="9">N</text>
+          <text x="224" y="294" fill="rgba(255,45,85,0.6)" font-family="Share Tech Mono" font-size="9">S</text>
+          <text x="148" y="224" fill="rgba(255,45,85,0.6)" font-family="Share Tech Mono" font-size="9">W</text>
+          <text x="286" y="224" fill="rgba(255,45,85,0.6)" font-family="Share Tech Mono" font-size="9">E</text>
+          <!-- Target boxes (enemies) -->
+          <rect x="80" y="100" width="32" height="28" fill="none" stroke="var(--red)" stroke-width="1" opacity=".7"/>
+          <line x1="80" y1="100" x2="92" y2="100" stroke="var(--red)" stroke-width="1.5" opacity=".9"/>
+          <line x1="80" y1="100" x2="80" y2="112" stroke="var(--red)" stroke-width="1.5" opacity=".9"/>
+          <text x="82" y="95" fill="rgba(255,45,85,0.8)" font-family="Share Tech Mono" font-size="7">TGT.01</text>
+          <rect x="330" y="130" width="30" height="26" fill="none" stroke="var(--red)" stroke-width="1" opacity=".7"/>
+          <text x="332" y="125" fill="rgba(255,45,85,0.8)" font-family="Share Tech Mono" font-size="7">TGT.02</text>
+          <rect x="60" y="300" width="28" height="24" fill="none" stroke="rgba(255,45,85,0.5)" stroke-width="1"/>
+          <text x="62" y="296" fill="rgba(255,45,85,0.5)" font-family="Share Tech Mono" font-size="7">TGT.03</text>
+          <!-- Distance readouts -->
+          <text x="118" y="120" fill="rgba(255,45,85,0.5)" font-family="Share Tech Mono" font-size="7">48m</text>
+          <text x="326" y="122" fill="rgba(255,45,85,0.5)" font-family="Share Tech Mono" font-size="7">112m</text>
+          <!-- Scan line clipped to eye -->
+          <rect x="90" y="0" width="260" height="2" fill="rgba(255,45,85,0.3)" style="animation:scanLine 2.5s linear infinite" clip-path="url(#eyeClip)"/>
+          <!-- Corner HUD data -->
+          <text x="10" y="24" fill="rgba(255,45,85,0.5)" font-family="Share Tech Mono" font-size="8">HEAT:ON</text>
+          <text x="10" y="36" fill="rgba(255,45,85,0.4)" font-family="Share Tech Mono" font-size="8">UV:ACTIVE</text>
+          <text x="360" y="24" fill="rgba(255,45,85,0.5)" font-family="Share Tech Mono" font-size="8" text-anchor="end">3 TARGETS</text>
+          <text x="360" y="36" fill="rgba(255,45,85,0.4)" font-family="Share Tech Mono" font-size="8" text-anchor="end">LOCK READY</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     SECTION 3 — EXOSKELETON FRAME
+══════════════════════════════════════ -->
+<section class="section" id="exo" style="--accent:var(--gold)">
+  <div class="exo-accent"></div>
+  <div class="sys-id" style="color:var(--gold)">03</div>
+  <div class="sys-layout">
+    <div class="sys-info">
+      <div class="sys-tag" style="color:var(--gold)">SYS_03 // STRUCTURAL LAYER</div>
+      <h2 class="sys-title" style="color:#fff">EXOSKELETON<br><span style="color:var(--gold)">FRAME</span></h2>
+      <p class="sys-desc">Forged from carbon-titanium nanoweave alloy, the ExoFrame bonds to your skeletal structure at 200 anchor points. Smart hydraulic actuators read neuromuscular intent before your muscles even fire — making your movements faster than thought.<br><br>12× human baseline strength. Terrain-adaptive shock absorption. Ballistic-rated plating rated to 14.5mm AP rounds. At 6.2kg of total system weight, you'll barely know it's there — until you need it.</p>
+      <div class="sys-specs" style="--accent:var(--gold)">
+        <div class="spec-chip"><div class="spec-chip-key">Strength Amp</div><div class="spec-chip-val" style="color:var(--gold)">12× Base</div></div>
+        <div class="spec-chip"><div class="spec-chip-key">Anchor Points</div><div class="spec-chip-val" style="color:var(--gold)">200</div></div>
+        <div class="spec-chip"><div class="spec-chip-key">System Weight</div><div class="spec-chip-val" style="color:var(--gold)">6.2 kg</div></div>
+        <div class="spec-chip"><div class="spec-chip-key">Ballistic Rtg</div><div class="spec-chip-val" style="color:var(--gold)">14.5mm AP</div></div>
+      </div>
+      <div class="sys-bar-wrap">
+        <div class="sys-bar-label"><span>FRAME INTEGRITY</span><span style="color:var(--gold)">98.3%</span></div>
+        <div class="sys-bar"><div class="sys-bar-fill" style="width:98.3%;background:var(--gold);box-shadow:0 0 8px var(--gold)"></div></div>
+        <div class="sys-bar-label"><span>ACTUATOR EFFICIENCY</span><span style="color:var(--gold)">95.7%</span></div>
+        <div class="sys-bar"><div class="sys-bar-fill" style="width:95.7%;background:var(--gold);box-shadow:0 0 8px var(--gold)"></div></div>
+        <div class="sys-bar-label"><span>LOAD DISTRIBUTION</span><span style="color:var(--gold)">97.2%</span></div>
+        <div class="sys-bar"><div class="sys-bar-fill" style="width:97.2%;background:var(--gold);box-shadow:0 0 8px var(--gold)"></div></div>
+      </div>
+    </div>
+    <div class="sys-visual">
+      <div class="exo-canvas">
+        <svg viewBox="0 0 440 480" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+          <defs>
+            <filter id="eglow"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <!-- Body frame silhouette -->
+          <!-- Head -->
+          <ellipse cx="220" cy="72" rx="38" ry="44" fill="rgba(255,215,0,0.06)" stroke="rgba(255,215,0,0.35)" stroke-width="1.5"/>
+          <rect x="198" y="58" width="44" height="32" rx="4" fill="rgba(0,0,0,0.5)" stroke="rgba(255,215,0,0.3)" stroke-width="1"/>
+          <!-- eyes -->
+          <rect x="202" y="66" width="16" height="10" rx="2" fill="rgba(255,215,0,0.15)" stroke="rgba(255,215,0,0.5)" stroke-width="1"/>
+          <rect x="222" y="66" width="16" height="10" rx="2" fill="rgba(255,215,0,0.15)" stroke="rgba(255,215,0,0.5)" stroke-width="1"/>
+          <!-- Torso -->
+          <path d="M178 118 L162 280 L190 280 L200 200 L220 212 L240 200 L250 280 L278 280 L262 118 Z"
+            fill="rgba(255,215,0,0.05)" stroke="rgba(255,215,0,0.3)" stroke-width="1.5"/>
+          <!-- Chest plate -->
+          <path d="M188 130 L220 126 L252 130 L258 175 L220 182 L182 175 Z"
+            fill="rgba(255,215,0,0.08)" stroke="rgba(255,215,0,0.4)" stroke-width="1.5" filter="url(#eglow)"/>
+          <!-- Chest core -->
+          <circle cx="220" cy="154" r="18" fill="rgba(0,0,0,0.7)" stroke="var(--gold)" stroke-width="1.5" filter="url(#eglow)"/>
+          <circle cx="220" cy="154" r="10" fill="rgba(255,215,0,0.2)" stroke="rgba(255,215,0,0.6)" stroke-width="1"/>
+          <circle cx="220" cy="154" r="4" fill="var(--gold)"/>
+          <circle cx="220" cy="154" r="18" fill="none" stroke="var(--gold)" stroke-width="1" opacity=".3" style="animation:pulseRing 3s ease-out infinite;transform-origin:220px 154px"/>
+          <!-- Spine line -->
+          <line x1="220" y1="116" x2="220" y2="280" stroke="rgba(255,215,0,0.2)" stroke-width="1" stroke-dasharray="4 5"/>
+          <!-- Rib details -->
+          <line x1="190" y1="190" x2="248" y2="190" stroke="rgba(255,215,0,0.15)" stroke-width="1"/>
+          <line x1="188" y1="210" x2="250" y2="210" stroke="rgba(255,215,0,0.12)" stroke-width="1"/>
+          <line x1="186" y1="230" x2="252" y2="230" stroke="rgba(255,215,0,0.1)" stroke-width="1"/>
+          <!-- Left shoulder -->
+          <circle cx="162" cy="126" r="18" fill="rgba(255,215,0,0.08)" stroke="rgba(255,215,0,0.4)" stroke-width="1.5" filter="url(#eglow)"/>
+          <!-- Right shoulder -->
+          <circle cx="278" cy="126" r="18" fill="rgba(255,215,0,0.08)" stroke="rgba(255,215,0,0.4)" stroke-width="1.5" filter="url(#eglow)"/>
+          <!-- Left arm -->
+          <path d="M148 140 L130 200 L136 205 L154 150 Z" fill="rgba(255,215,0,0.05)" stroke="rgba(255,215,0,0.25)" stroke-width="1"/>
+          <rect x="122" y="198" width="22" height="8" rx="3" fill="rgba(255,215,0,0.2)" stroke="var(--gold)" stroke-width="1" style="animation:blink2 2s infinite"/>
+          <!-- Right arm -->
+          <path d="M292 140 L310 200 L304 205 L286 150 Z" fill="rgba(255,215,0,0.05)" stroke="rgba(255,215,0,0.25)" stroke-width="1"/>
+          <rect x="296" y="198" width="22" height="8" rx="3" fill="rgba(255,215,0,0.2)" stroke="var(--gold)" stroke-width="1" style="animation:blink2 2.5s infinite"/>
+          <!-- Hip joint -->
+          <path d="M190 278 L162 290 L165 308 L200 295 Z" fill="rgba(255,215,0,0.05)" stroke="rgba(255,215,0,0.2)" stroke-width="1"/>
+          <path d="M250 278 L278 290 L275 308 L240 295 Z" fill="rgba(255,215,0,0.05)" stroke="rgba(255,215,0,0.2)" stroke-width="1"/>
+          <!-- Legs -->
+          <rect x="178" y="295" width="38" height="110" rx="4" fill="rgba(255,215,0,0.04)" stroke="rgba(255,215,0,0.2)" stroke-width="1"/>
+          <rect x="224" y="295" width="38" height="110" rx="4" fill="rgba(255,215,0,0.04)" stroke="rgba(255,215,0,0.2)" stroke-width="1"/>
+          <!-- Knee -->
+          <circle cx="197" cy="360" r="14" fill="rgba(0,0,0,0.7)" stroke="rgba(255,215,0,0.4)" stroke-width="1.5"/>
+          <circle cx="243" cy="360" r="14" fill="rgba(0,0,0,0.7)" stroke="rgba(255,215,0,0.4)" stroke-width="1.5"/>
+          <circle cx="197" cy="360" r="6" fill="rgba(255,215,0,0.25)"/>
+          <circle cx="243" cy="360" r="6" fill="rgba(255,215,0,0.25)"/>
+          <!-- Load indicators (anchor points) -->
+          <circle cx="192" cy="140" r="3" fill="var(--gold)" filter="url(#eglow)" style="animation:blink 1.8s step-end infinite"/>
+          <circle cx="248" cy="140" r="3" fill="var(--gold)" filter="url(#eglow)" style="animation:blink 2s step-end infinite .4s"/>
+          <circle cx="162" cy="190" r="3" fill="var(--gold)" filter="url(#eglow)" style="animation:blink 1.6s step-end infinite .2s"/>
+          <circle cx="278" cy="190" r="3" fill="var(--gold)" filter="url(#eglow)" style="animation:blink 2.2s step-end infinite .6s"/>
+          <circle cx="190" cy="235" r="3" fill="var(--gold)" filter="url(#eglow)" style="animation:blink 1.9s step-end infinite .1s"/>
+          <circle cx="250" cy="235" r="3" fill="var(--gold)" filter="url(#eglow)" style="animation:blink 1.5s step-end infinite .8s"/>
+          <!-- Stress lines -->
+          <text x="90" y="154" fill="rgba(255,215,0,0.45)" font-family="Share Tech Mono" font-size="7" text-anchor="middle">LOAD</text>
+          <text x="90" y="164" fill="rgba(255,215,0,0.6)" font-family="Share Tech Mono" font-size="8" text-anchor="middle">12×</text>
+          <line x1="100" y1="158" x2="150" y2="155" stroke="rgba(255,215,0,0.2)" stroke-width="1"/>
+          <text x="350" y="154" fill="rgba(255,215,0,0.45)" font-family="Share Tech Mono" font-size="7" text-anchor="middle">STATUS</text>
+          <text x="350" y="164" fill="rgba(255,215,0,0.6)" font-family="Share Tech Mono" font-size="8" text-anchor="middle">ACTIVE</text>
+          <line x1="300" y1="158" x2="340" y2="158" stroke="rgba(255,215,0,0.2)" stroke-width="1"/>
+        </svg>
+        <div class="data-tag" style="top:8%;left:4%;color:var(--gold);border-color:rgba(255,215,0,0.3);animation-delay:0s">ANCHOR:200pt</div>
+        <div class="data-tag" style="bottom:12%;right:4%;color:var(--gold);border-color:rgba(255,215,0,0.3);animation-delay:2s">LOAD:12×</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     SECTION 4 — BIOSYNC CORE
+══════════════════════════════════════ -->
+<section class="section" id="biosync" style="--accent:var(--green)">
+  <div class="bio-accent"></div>
+  <div class="sys-id" style="color:var(--green)">04</div>
+  <div class="sys-layout" style="direction:rtl">
+    <div class="sys-info" style="direction:ltr">
+      <div class="sys-tag" style="color:var(--green)">SYS_04 // BIOLOGICAL MANAGEMENT LAYER</div>
+      <h2 class="sys-title" style="color:#fff">BIOSYNC<br><span style="color:var(--green)">CORE</span></h2>
+      <p class="sys-desc">A trillion nanobots circulating through your bloodstream form a living repair network. The BioSync Core monitors 840 physiological parameters simultaneously — heart rate, hormone cascades, cellular integrity, oxygen saturation, neural inflammation — acting before symptoms emerge.<br><br>Broken bones knit in hours. Wounds clot and seal in seconds. Toxins are neutralized before absorption. You don't just survive — you thrive beyond any natural limit.</p>
+      <div class="sys-specs">
+        <div class="spec-chip"><div class="spec-chip-key">Nanobot Count</div><div class="spec-chip-val" style="color:var(--green)">1 Trillion</div></div>
+        <div class="spec-chip"><div class="spec-chip-key">Bio Parameters</div><div class="spec-chip-val" style="color:var(--green)">840</div></div>
+        <div class="spec-chip"><div class="spec-chip-key">Heal Rate</div><div class="spec-chip-val" style="color:var(--green)">40× Base</div></div>
+        <div class="spec-chip"><div class="spec-chip-key">Response Time</div><div class="spec-chip-val" style="color:var(--green)">&lt;0.1 sec</div></div>
+      </div>
+      <div class="sys-bar-wrap">
+        <div class="sys-bar-label"><span>NANOBOT DENSITY</span><span style="color:var(--green)">98.6%</span></div>
+        <div class="sys-bar"><div class="sys-bar-fill" style="width:98.6%;background:var(--green);box-shadow:0 0 8px var(--green)"></div></div>
+        <div class="sys-bar-label"><span>CELLULAR INTEGRITY</span><span style="color:var(--green)">100%</span></div>
+        <div class="sys-bar"><div class="sys-bar-fill" style="width:100%;background:var(--green);box-shadow:0 0 8px var(--green)"></div></div>
+        <div class="sys-bar-label"><span>TOXIN NEUTRALIZATION</span><span style="color:var(--green)">96.4%</span></div>
+        <div class="sys-bar"><div class="sys-bar-fill" style="width:96.4%;background:var(--green);box-shadow:0 0 8px var(--green)"></div></div>
+      </div>
+    </div>
+    <div class="sys-visual" style="direction:ltr">
+      <div class="bio-canvas">
+        <svg viewBox="0 0 440 440" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+          <defs>
+            <filter id="bglow"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <!-- Heart ECG background -->
+          <path d="M20 220 L70 220 L90 180 L105 255 L120 195 L135 220 L420 220"
+            fill="none" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-dasharray="600" style="animation:dataFill 2s linear infinite"/>
+          <!-- Double helix DNA -->
+          <!-- Strand 1 -->
+          <path d="M220 40 C250 70 250 110 220 140 C190 170 190 210 220 240 C250 270 250 310 220 340 C190 370 190 410 220 440"
+            fill="none" stroke="var(--green)" stroke-width="2" filter="url(#bglow)"/>
+          <!-- Strand 2 -->
+          <path d="M220 40 C190 70 190 110 220 140 C250 170 250 210 220 240 C190 270 190 310 220 340 C250 370 250 410 220 440"
+            fill="none" stroke="rgba(0,255,136,0.5)" stroke-width="2" filter="url(#bglow)"/>
+          <!-- Rungs -->
+          <line x1="245" y1="60" x2="195" y2="60" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/>
+          <line x1="242" y1="80" x2="198" y2="80" stroke="rgba(0,255,136,0.4)" stroke-width="1.5"/>
+          <line x1="232" y1="100" x2="208" y2="100" stroke="rgba(0,255,136,0.4)" stroke-width="1.5"/>
+          <line x1="220" y1="120" x2="220" y2="120" stroke="rgba(0,255,136,0.5)" stroke-width="2"/>
+          <line x1="208" y1="140" x2="232" y2="140" stroke="rgba(0,255,136,0.4)" stroke-width="1.5"/>
+          <line x1="198" y1="160" x2="242" y2="160" stroke="rgba(0,255,136,0.4)" stroke-width="1.5"/>
+          <line x1="195" y1="180" x2="245" y2="180" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/>
+          <line x1="198" y1="200" x2="242" y2="200" stroke="rgba(0,255,136,0.4)" stroke-width="1.5"/>
+          <line x1="208" y1="220" x2="232" y2="220" stroke="rgba(0,255,136,0.4)" stroke-width="1.5"/>
+          <line x1="220" y1="240" x2="220" y2="240" stroke="rgba(0,255,136,0.5)" stroke-width="2"/>
+          <line x1="232" y1="260" x2="208" y2="260" stroke="rgba(0,255,136,0.4)" stroke-width="1.5"/>
+          <line x1="242" y1="280" x2="198" y2="280" stroke="rgba(0,255,136,0.4)" stroke-width="1.5"/>
+          <line x1="245" y1="300" x2="195" y2="300" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/>
+          <line x1="242" y1="320" x2="198" y2="320" stroke="rgba(0,255,136,0.4)" stroke-width="1.5"/>
+          <line x1="232" y1="340" x2="208" y2="340" stroke="rgba(0,255,136,0.4)" stroke-width="1.5"/>
+          <line x1="220" y1="360" x2="220" y2="360" stroke="rgba(0,255,136,0.5)" stroke-width="2"/>
+          <line x1="208" y1="380" x2="232" y2="380" stroke="rgba(0,255,136,0.4)" stroke-width="1.5"/>
+          <line x1="198" y1="400" x2="242" y2="400" stroke="rgba(0,255,136,0.4)" stroke-width="1.5"/>
+          <!-- Nanobot particles -->
+          <circle cx="245" cy="60" r="4" fill="var(--green)" filter="url(#bglow)" style="animation:blink 1.4s step-end infinite"/>
+          <circle cx="195" cy="60" r="4" fill="var(--green)" filter="url(#bglow)" style="animation:blink 1.8s step-end infinite .3s"/>
+          <circle cx="220" cy="140" r="4" fill="var(--green)" filter="url(#bglow)" style="animation:blink 2s step-end infinite .6s"/>
+          <circle cx="245" cy="180" r="4" fill="var(--green)" filter="url(#bglow)" style="animation:blink 1.6s step-end infinite .1s"/>
+          <circle cx="195" cy="300" r="4" fill="var(--green)" filter="url(#bglow)" style="animation:blink 1.9s step-end infinite .5s"/>
+          <circle cx="245" cy="380" r="4" fill="var(--green)" filter="url(#bglow)" style="animation:blink 2.1s step-end infinite .2s"/>
+          <!-- Central bio monitor rings -->
+          <circle cx="220" cy="220" r="50" fill="none" stroke="rgba(0,255,136,0.12)" stroke-width="1" stroke-dasharray="5 4" style="animation:spin 15s linear infinite;transform-origin:220px 220px"/>
+          <!-- Labels -->
+          <text x="275" y="65" fill="rgba(0,255,136,0.5)" font-family="Share Tech Mono" font-size="8">A-T BOND</text>
+          <text x="275" y="185" fill="rgba(0,255,136,0.5)" font-family="Share Tech Mono" font-size="8">G-C BOND</text>
+          <text x="275" y="305" fill="rgba(0,255,136,0.5)" font-family="Share Tech Mono" font-size="8">REPAIR</text>
+          <text x="60" y="300" fill="rgba(0,255,136,0.45)" font-family="Share Tech Mono" font-size="8">ACTIVE</text>
+          <text x="60" y="185" fill="rgba(0,255,136,0.45)" font-family="Share Tech Mono" font-size="8">SCAN</text>
+        </svg>
+        <div class="data-tag" style="top:6%;right:4%;color:var(--green);border-color:rgba(0,255,136,0.3);animation-delay:0s">1T NANOBOTS</div>
+        <div class="data-tag" style="bottom:10%;left:4%;color:var(--green);border-color:rgba(0,255,136,0.3);animation-delay:2.5s">HEAL:40×</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     SECTION 5 — COMBAT HUD
+══════════════════════════════════════ -->
+<section class="section" id="combat" style="--accent:var(--orange)">
+  <div class="combat-accent"></div>
+  <div class="sys-id" style="color:var(--orange)">05</div>
+  <div class="sys-layout">
+    <div class="sys-info">
+      <div class="sys-tag" style="color:var(--orange)">SYS_05 // BATTLEFIELD AWARENESS LAYER</div>
+      <h2 class="sys-title" style="color:#fff">COMBAT<br><span style="color:var(--orange)">HUD</span></h2>
+      <p class="sys-desc">The world becomes your display. An augmented reality overlay renders at 240Hz directly onto your synthetic retina — no screen, no delay, no blind spots. Every surface becomes an interface.<br><br>AI terrain mapping rebuilds your environment 60 times per second. Ally positions, ammo counts, structural weak points, wind vectors, ballistic arcs — all calculated and displayed the moment you need them. The fog of war doesn't exist for you.</p>
+      <div class="sys-specs">
+        <div class="spec-chip"><div class="spec-chip-key">Render Rate</div><div class="spec-chip-val" style="color:var(--orange)">240 Hz</div></div>
+        <div class="spec-chip"><div class="spec-chip-key">Map Refresh</div><div class="spec-chip-val" style="color:var(--orange)">60×/sec</div></div>
+        <div class="spec-chip"><div class="spec-chip-key">Data Layers</div><div class="spec-chip-val" style="color:var(--orange)">32 Active</div></div>
+        <div class="spec-chip"><div class="spec-chip-key">Range</div><div class="spec-chip-val" style="color:var(--orange)">2.4 km</div></div>
+      </div>
+      <div class="sys-bar-wrap">
+        <div class="sys-bar-label"><span>SITUATIONAL AWARENESS</span><span style="color:var(--orange)">96.8%</span></div>
+        <div class="sys-bar"><div class="sys-bar-fill" style="width:96.8%;background:var(--orange);box-shadow:0 0 8px var(--orange)"></div></div>
+        <div class="sys-bar-label"><span>MAP FIDELITY</span><span style="color:var(--orange)">93.5%</span></div>
+        <div class="sys-bar"><div class="sys-bar-fill" style="width:93.5%;background:var(--orange);box-shadow:0 0 8px var(--orange)"></div></div>
+        <div class="sys-bar-label"><span>PREDICTION ACCURACY</span><span style="color:var(--orange)">91.0%</span></div>
+        <div class="sys-bar"><div class="sys-bar-fill" style="width:91%;background:var(--orange);box-shadow:0 0 8px var(--orange)"></div></div>
+      </div>
+    </div>
+    <div class="sys-visual">
+      <div class="combat-canvas">
+        <svg viewBox="0 0 460 460" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+          <defs>
+            <filter id="coglow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <!-- HUD frame -->
+          <rect x="20" y="20" width="420" height="420" fill="rgba(255,140,0,0.02)" stroke="rgba(255,140,0,0.15)" stroke-width="1"/>
+          <!-- Corner brackets -->
+          <path d="M20 20 L60 20 L60 24 L24 24 L24 60 L20 60 Z" fill="rgba(255,140,0,0.4)"/>
+          <path d="M440 20 L400 20 L400 24 L436 24 L436 60 L440 60 Z" fill="rgba(255,140,0,0.4)"/>
+          <path d="M20 440 L60 440 L60 436 L24 436 L24 400 L20 400 Z" fill="rgba(255,140,0,0.4)"/>
+          <path d="M440 440 L400 440 L400 436 L436 436 L436 400 L440 400 Z" fill="rgba(255,140,0,0.4)"/>
+          <!-- Grid -->
+          <line x1="20" y1="230" x2="440" y2="230" stroke="rgba(255,140,0,0.08)" stroke-width="1"/>
+          <line x1="230" y1="20" x2="230" y2="440" stroke="rgba(255,140,0,0.08)" stroke-width="1"/>
+          <!-- Sub-grid -->
+          <line x1="20" y1="125" x2="440" y2="125" stroke="rgba(255,140,0,0.04)" stroke-width="1"/>
+          <line x1="20" y1="335" x2="440" y2="335" stroke="rgba(255,140,0,0.04)" stroke-width="1"/>
+          <line x1="125" y1="20" x2="125" y2="440" stroke="rgba(255,140,0,0.04)" stroke-width="1"/>
+          <line x1="335" y1="20" x2="335" y2="440" stroke="rgba(255,140,0,0.04)" stroke-width="1"/>
+          <!-- Terrain contour lines -->
+          <path d="M20 330 Q80 310 130 320 Q180 330 230 315 Q280 300 330 310 Q380 320 440 305"
+            fill="none" stroke="rgba(255,140,0,0.2)" stroke-width="1"/>
+          <path d="M20 350 Q90 325 140 338 Q190 352 240 335 Q290 318 340 330 Q390 342 440 328"
+            fill="none" stroke="rgba(255,140,0,0.15)" stroke-width="1"/>
+          <!-- Friendly unit -->
+          <circle cx="230" cy="230" r="10" fill="rgba(255,140,0,0.3)" stroke="var(--orange)" stroke-width="2" filter="url(#coglow)"/>
+          <circle cx="230" cy="230" r="5" fill="var(--orange)"/>
+          <circle cx="230" cy="230" r="20" fill="none" stroke="var(--orange)" stroke-width="1" opacity=".4" style="animation:pulseRing 2s ease-out infinite;transform-origin:230px 230px"/>
+          <!-- Allied units -->
+          <circle cx="155" cy="185" r="7" fill="rgba(255,140,0,0.2)" stroke="rgba(255,140,0,0.7)" stroke-width="1.5"/>
+          <circle cx="155" cy="185" r="3" fill="var(--orange)" opacity=".7"/>
+          <text x="162" y="181" fill="rgba(255,140,0,0.6)" font-family="Share Tech Mono" font-size="8">ALLY-1</text>
+          <circle cx="308" cy="200" r="7" fill="rgba(255,140,0,0.2)" stroke="rgba(255,140,0,0.7)" stroke-width="1.5"/>
+          <circle cx="308" cy="200" r="3" fill="var(--orange)" opacity=".7"/>
+          <text x="315" y="196" fill="rgba(255,140,0,0.6)" font-family="Share Tech Mono" font-size="8">ALLY-2</text>
+          <!-- Enemy units (red) -->
+          <rect x="104" y="122" width="12" height="12" fill="rgba(255,45,85,0.2)" stroke="rgba(255,45,85,0.8)" stroke-width="1.5"/>
+          <text x="88" y="118" fill="rgba(255,45,85,0.7)" font-family="Share Tech Mono" font-size="7">HOSTILE</text>
+          <rect x="320" y="140" width="12" height="12" fill="rgba(255,45,85,0.2)" stroke="rgba(255,45,85,0.8)" stroke-width="1.5"/>
+          <text x="306" y="136" fill="rgba(255,45,85,0.7)" font-family="Share Tech Mono" font-size="7">HOSTILE</text>
+          <rect x="360" y="290" width="12" height="12" fill="rgba(255,45,85,0.15)" stroke="rgba(255,45,85,0.5)" stroke-width="1"/>
+          <text x="346" y="286" fill="rgba(255,45,85,0.5)" font-family="Share Tech Mono" font-size="7">UNKNOWN</text>
+          <!-- Ballistic arc -->
+          <path d="M230 230 Q165 120 110 128" fill="none" stroke="rgba(255,140,0,0.5)" stroke-width="1.5" stroke-dasharray="5 4" filter="url(#coglow)"/>
+          <path d="M230 230 Q285 140 326 146" fill="none" stroke="rgba(255,140,0,0.5)" stroke-width="1.5" stroke-dasharray="5 4" filter="url(#coglow)"/>
+          <!-- Range circle -->
+          <circle cx="230" cy="230" r="150" fill="none" stroke="rgba(255,140,0,0.07)" stroke-width="1" stroke-dasharray="8 6"/>
+          <!-- Compass rose -->
+          <text x="225" y="36" fill="rgba(255,140,0,0.5)" font-family="Share Tech Mono" font-size="9">N</text>
+          <text x="225" y="432" fill="rgba(255,140,0,0.4)" font-family="Share Tech Mono" font-size="9">S</text>
+          <text x="26" y="234" fill="rgba(255,140,0,0.4)" font-family="Share Tech Mono" font-size="9">W</text>
+          <text x="426" y="234" fill="rgba(255,140,0,0.4)" font-family="Share Tech Mono" font-size="9">E</text>
+          <!-- Scan sweep line -->
+          <line x1="230" y1="230" x2="380" y2="50" stroke="rgba(255,140,0,0.15)" stroke-width="1" style="transform-origin:230px 230px;animation:spin 6s linear infinite"/>
+          <!-- Status bar -->
+          <rect x="20" y="405" width="420" height="16" fill="rgba(255,140,0,0.03)" stroke="rgba(255,140,0,0.12)" stroke-width="1"/>
+          <text x="28" y="417" fill="rgba(255,140,0,0.5)" font-family="Share Tech Mono" font-size="8">COMBAT HUD v7.2 | HOSTILES:3 | ALLIES:2 | AMMO:240 | HP:98%</text>
+        </svg>
+        <div class="data-tag" style="top:4%;left:20%;color:var(--orange);border-color:rgba(255,140,0,0.3);animation-delay:1s">2.4KM RANGE</div>
+        <div class="data-tag" style="bottom:8%;right:20%;color:var(--orange);border-color:rgba(255,140,0,0.3);animation-delay:3s">240Hz RENDER</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     SECTION 6 — QUANTUM ENCRYPTION
+══════════════════════════════════════ -->
+<section class="section" id="quantum" style="--accent:var(--purple)">
+  <div class="quantum-accent"></div>
+  <div class="sys-id" style="color:var(--purple)">06</div>
+  <div class="sys-layout" style="direction:rtl">
+    <div class="sys-info" style="direction:ltr">
+      <div class="sys-tag" style="color:var(--purple)">SYS_06 // SOVEREIGNTY LAYER</div>
+      <h2 class="sys-title" style="color:#fff">QUANTUM<br><span style="color:var(--purple)">ENCRYPTION</span></h2>
+      <p class="sys-desc">Your consciousness is your most valuable asset. The Quantum Shield wraps every neuron, every memory, every system command in 4,096-qubit post-quantum cryptographic lattice — mathematically unbreakable by any classical or quantum computer in existence.<br><br>Zero-knowledge architecture means even NEXUS cannot read your data. All keys are generated from your unique neural signature. No key, no entry. You are the only password that matters.</p>
+      <div class="sys-specs">
+        <div class="spec-chip"><div class="spec-chip-key">Qubit Depth</div><div class="spec-chip-val" style="color:var(--purple)">4,096 qb</div></div>
+        <div class="spec-chip"><div class="spec-chip-key">Algorithm</div><div class="spec-chip-val" style="color:var(--purple)">CRYSTALS</div></div>
+        <div class="spec-chip"><div class="spec-chip-key">Key Source</div><div class="spec-chip-val" style="color:var(--purple)">Neural DNA</div></div>
+        <div class="spec-chip"><div class="spec-chip-key">Breach Risk</div><div class="spec-chip-val" style="color:var(--purple)">0.000%</div></div>
+      </div>
+      <div class="sys-bar-wrap">
+        <div class="sys-bar-label"><span>ENCRYPTION STRENGTH</span><span style="color:var(--purple)">100%</span></div>
+        <div class="sys-bar"><div class="sys-bar-fill" style="width:100%;background:var(--purple);box-shadow:0 0 8px var(--purple)"></div></div>
+        <div class="sys-bar-label"><span>QUANTUM COHERENCE</span><span style="color:var(--purple)">97.8%</span></div>
+        <div class="sys-bar"><div class="sys-bar-fill" style="width:97.8%;background:var(--purple);box-shadow:0 0 8px var(--purple)"></div></div>
+        <div class="sys-bar-label"><span>ZERO-KNOWLEDGE PROOF</span><span style="color:var(--purple)">100%</span></div>
+        <div class="sys-bar"><div class="sys-bar-fill" style="width:100%;background:var(--purple);box-shadow:0 0 8px var(--purple)"></div></div>
+      </div>
+    </div>
+    <div class="sys-visual" style="direction:ltr">
+      <div class="quantum-canvas">
+        <svg viewBox="0 0 440 440" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+          <defs>
+            <filter id="qglow"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <!-- Outer rings -->
+          <circle cx="220" cy="220" r="190" fill="none" stroke="rgba(191,95,255,0.08)" stroke-width="1" stroke-dasharray="12 8" style="animation:spin 40s linear infinite;transform-origin:220px 220px"/>
+          <circle cx="220" cy="220" r="165" fill="none" stroke="rgba(191,95,255,0.1)" stroke-width="1" stroke-dasharray="6 8" style="animation:spinR 28s linear infinite;transform-origin:220px 220px"/>
+          <circle cx="220" cy="220" r="140" fill="none" stroke="rgba(191,95,255,0.12)" stroke-width="1" style="animation:spin 20s linear infinite;transform-origin:220px 220px"/>
+          <!-- Shield hexagon -->
+          <polygon points="220,100 310,153 310,258 220,311 130,258 130,153" fill="rgba(191,95,255,0.05)" stroke="var(--purple)" stroke-width="1.5" filter="url(#qglow)"/>
+          <polygon points="220,125 295,168 295,255 220,298 145,255 145,168" fill="rgba(191,95,255,0.04)" stroke="rgba(191,95,255,0.4)" stroke-width="1"/>
+          <!-- Inner hex -->
+          <polygon points="220,155 268,183 268,238 220,266 172,238 172,183" fill="rgba(191,95,255,0.08)" stroke="rgba(191,95,255,0.5)" stroke-width="1.5" filter="url(#qglow)"/>
+          <!-- Central lock icon -->
+          <rect x="200" y="200" width="40" height="34" rx="4" fill="rgba(0,0,0,0.7)" stroke="var(--purple)" stroke-width="1.5" filter="url(#qglow)"/>
+          <path d="M208 200 L208 192 Q208 180 220 180 Q232 180 232 192 L232 200" fill="none" stroke="var(--purple)" stroke-width="2" filter="url(#qglow)"/>
+          <circle cx="220" cy="217" r="5" fill="var(--purple)" opacity=".8"/>
+          <line x1="220" y1="222" x2="220" y2="228" stroke="var(--purple)" stroke-width="2" opacity=".8"/>
+          <!-- Pulse rings on lock -->
+          <rect x="200" y="200" width="40" height="34" rx="4" fill="none" stroke="var(--purple)" stroke-width="1" opacity=".3" style="animation:pulseRing 3s ease-out infinite;transform-origin:220px 217px"/>
+          <!-- Data stream lines -->
+          <path d="M130 153 Q80 100 50 80" fill="none" stroke="rgba(191,95,255,0.3)" stroke-width="1" stroke-dasharray="400" style="animation:dataFill 3s linear infinite"/>
+          <path d="M310 153 Q360 100 390 80" fill="none" stroke="rgba(191,95,255,0.3)" stroke-width="1" stroke-dasharray="400" style="animation:dataFill 3s linear infinite .5s"/>
+          <path d="M220 100 Q220 50 220 20" fill="none" stroke="rgba(191,95,255,0.3)" stroke-width="1" stroke-dasharray="300" style="animation:dataFill 2.5s linear infinite 1s"/>
+          <path d="M130 258 Q80 300 50 360" fill="none" stroke="rgba(191,95,255,0.3)" stroke-width="1" stroke-dasharray="400" style="animation:dataFill 3s linear infinite 1.5s"/>
+          <path d="M310 258 Q360 300 390 360" fill="none" stroke="rgba(191,95,255,0.3)" stroke-width="1" stroke-dasharray="400" style="animation:dataFill 3s linear infinite 2s"/>
+          <path d="M220 311 Q220 370 220 420" fill="none" stroke="rgba(191,95,255,0.3)" stroke-width="1" stroke-dasharray="300" style="animation:dataFill 2.5s linear infinite 2.5s"/>
+          <!-- Qubit nodes at hex vertices -->
+          <circle cx="220" cy="100" r="8" fill="rgba(191,95,255,0.2)" stroke="var(--purple)" stroke-width="1.5" filter="url(#qglow)" style="animation:pulse 2s ease-in-out infinite"/>
+          <circle cx="310" cy="153" r="8" fill="rgba(191,95,255,0.2)" stroke="var(--purple)" stroke-width="1.5" filter="url(#qglow)" style="animation:pulse 2s ease-in-out infinite .3s"/>
+          <circle cx="310" cy="258" r="8" fill="rgba(191,95,255,0.2)" stroke="var(--purple)" stroke-width="1.5" filter="url(#qglow)" style="animation:pulse 2s ease-in-out infinite .6s"/>
+          <circle cx="220" cy="311" r="8" fill="rgba(191,95,255,0.2)" stroke="var(--purple)" stroke-width="1.5" filter="url(#qglow)" style="animation:pulse 2s ease-in-out infinite .9s"/>
+          <circle cx="130" cy="258" r="8" fill="rgba(191,95,255,0.2)" stroke="var(--purple)" stroke-width="1.5" filter="url(#qglow)" style="animation:pulse 2s ease-in-out infinite 1.2s"/>
+          <circle cx="130" cy="153" r="8" fill="rgba(191,95,255,0.2)" stroke="var(--purple)" stroke-width="1.5" filter="url(#qglow)" style="animation:pulse 2s ease-in-out infinite 1.5s"/>
+          <!-- Binary rain on edges -->
+          <text x="50" y="85" fill="rgba(191,95,255,0.4)" font-family="Share Tech Mono" font-size="7">01001011</text>
+          <text x="360" y="85" fill="rgba(191,95,255,0.4)" font-family="Share Tech Mono" font-size="7">11010100</text>
+          <text x="50" y="368" fill="rgba(191,95,255,0.35)" font-family="Share Tech Mono" font-size="7">00111010</text>
+          <text x="360" y="368" fill="rgba(191,95,255,0.35)" font-family="Share Tech Mono" font-size="7">10101101</text>
+          <text x="198" y="16" fill="rgba(191,95,255,0.4)" font-family="Share Tech Mono" font-size="7">1101 0011</text>
+          <text x="198" y="432" fill="rgba(191,95,255,0.35)" font-family="Share Tech Mono" font-size="7">0110 1110</text>
+          <!-- Shield status -->
+          <text x="220" y="345" text-anchor="middle" fill="rgba(191,95,255,0.6)" font-family="Share Tech Mono" font-size="9" letter-spacing="2">SHIELD: ACTIVE</text>
+        </svg>
+        <div class="data-tag" style="top:5%;right:5%;color:var(--purple);border-color:rgba(191,95,255,0.3);animation-delay:0.5s">4096-QUBIT</div>
+        <div class="data-tag" style="bottom:8%;left:5%;color:var(--purple);border-color:rgba(191,95,255,0.3);animation-delay:2s">BREACH:0.000%</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     SECTION 7 — CTA
+══════════════════════════════════════ -->
+<section class="section" id="cta-section">
+  <div class="hero-grid" style="opacity:.5"></div>
+  <div style="position:relative;z-index:2;text-align:center;padding:0 40px">
+    <div class="cta-label">ALL SYSTEMS CLEARED FOR INTEGRATION</div>
+    <h2 class="cta-h">READY TO<br><span>EVOLVE?</span></h2>
+    <p class="cta-p">Six systems. One body. Infinite potential. Schedule your baseline assessment and begin the transformation.</p>
+    <div class="cta-btns">
+      <a href="#hero" class="btn-p" onclick="goTo(0)">← REVIEW SYSTEMS</a>
+      <a href="#" class="btn-s">BOOK CONSULTATION</a>
+    </div>
+    <div style="margin-top:60px;font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:3px;color:rgba(255,255,255,0.25);line-height:1.8">
+      © 2087 NEXUS SYSTEMS CORP. &nbsp;|&nbsp; NEURAL ETHICS CERTIFIED &nbsp;|&nbsp; ALL AUGMENTATIONS SOVEREIGN
+    </div>
+  </div>
+</section>
+
+<script>
+// ─── Cursor ───────────────────────────────
+const cd = document.getElementById('cd'), cr = document.getElementById('cr');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cd.style.left=mx+'px';cd.style.top=my+'px'});
+(function tick(){rx+=(mx-rx)*.1;ry+=(my-ry)*.1;cr.style.left=rx+'px';cr.style.top=ry+'px';requestAnimationFrame(tick)})();
+document.querySelectorAll('a,button,.sys-dot,.prog-dot').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{cr.style.width='50px';cr.style.height='50px';cr.style.borderColor='var(--cyan)'});
+  el.addEventListener('mouseleave',()=>{cr.style.width='32px';cr.style.height='32px';cr.style.borderColor='rgba(0,245,255,0.6)'});
+});
+
+// ─── Scroll snap tracking ─────────────────
+const sections = [...document.querySelectorAll('.section')];
+const dots = [...document.querySelectorAll('.prog-dot')];
+const sysDots = [...document.querySelectorAll('.sys-dot')];
+
+function goTo(i){ sections[i].scrollIntoView({behavior:'smooth'}); }
+window.goTo = goTo;
+
+function setActive(i){
+  sections.forEach((s,j)=>{
+    if(j===i) s.classList.add('active'); else s.classList.remove('active');
+  });
+  dots.forEach((d,j)=>d.classList.toggle('on',j===i));
+  sysDots.forEach((d,j)=>d.classList.toggle('active',j===i-1));
+  // Trigger bar animations for visible section
+  sections[i].querySelectorAll('.sys-bar-fill').forEach(b=>{
+    b.style.transition='none'; b.style.transform='scaleX(0)';
+    setTimeout(()=>{b.style.transition='transform 1.2s cubic-bezier(.16,1,.3,1)';b.style.transform='scaleX(1)'},50);
+  });
+}
+
+const io = new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting && e.intersectionRatio > .5){
+      const i = sections.indexOf(e.target);
+      setActive(i);
+    }
+  });
+},{threshold:.5});
+sections.forEach(s=>io.observe(s));
+setActive(0);
+
+// ─── Keyboard nav ─────────────────────────
+document.addEventListener('keydown',e=>{
+  const cur = sections.findIndex(s=>s.classList.contains('active'));
+  if(e.key==='ArrowDown'||e.key==='PageDown') goTo(Math.min(cur+1,sections.length-1));
+  if(e.key==='ArrowUp'||e.key==='PageUp') goTo(Math.max(cur-1,0));
+});
+</script>
+</body>
+</html>
